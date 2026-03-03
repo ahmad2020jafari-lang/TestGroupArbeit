@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Login - TicTacToe</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="login-container">
+        <h2>TicTacToe Login</h2>
+        <form action="/login" method="POST" enctype="multipart/form-data">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <label class="file-label">Upload Profile Picture</label>
+            <input type="file" name="profilePic" accept="image/*">
+            <button type="submit">Login</button>
+        </form>
+    </div>
+</body>
+
+</html>
