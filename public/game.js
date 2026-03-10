@@ -1,167 +1,402 @@
-const boardEl = document.getElementById("board");
-const userScoreEl = document.getElementById("userScore");
-const aiScoreEl = document.getElementById("aiScore");
-const resultLog = document.getElementById("resultLog");
-const aiPicEl = document.getElementById("aiPic");
-const aiNameEl = document.getElementById("aiName");
+// <!-- I want to have this code for later on my Repo -->
+// const socket = io();
 
-let board = ["", "", "", "", "", "", "", "", ""];
-let userScore = 0;
-let aiScore = 0;
-let gameOver = false;
+// let room = null;
+// let playerSymbol = "X";
+// let opponentSymbol = "O";
+// let isMyTurn = false;
+// let board = Array(9).fill("");
+// let gameActive = false;
 
-const human = "X";
-const ai = "O";
+// let username = localStorage.getItem("username");
+// let profilePic = localStorage.getItem("profilePic");
 
-const aiAvatars = [
-    "https://i.imgur.com/6VBx3io.png",
-    "https://i.imgur.com/ZF6s192.png",
-    "https://i.imgur.com/8Km9tLL.png",
-    "https://i.imgur.com/0rVeh4J.png",
-    "https://i.imgur.com/Xz9jMsk.png",
-    "https://i.imgur.com/QVjO3Qo.png",
-    "https://i.imgur.com/1F0WvTl.png",
-    "https://i.imgur.com/FYf3PzS.png"
-];
+// socket.emit("playerInfo", { username, profilePic });
 
-// Pick random AI avatar
-const randomIndex = Math.floor(Math.random() * aiAvatars.length);
-aiPicEl.src = aiAvatars[randomIndex];
+// const cells = document.querySelectorAll(".cell");
+// const statusText = document.getElementById("statusText");
+// const p1Name = document.getElementById("player1Name");
+// const p2Name = document.getElementById("player2Name");
+// const p1Pic = document.getElementById("player1Pic");
+// const p2Pic = document.getElementById("player2Pic");
+// const p1ScoreEl = document.getElementById("player1Score");
+// const p2ScoreEl = document.getElementById("player2Score");
+// const restartBtn = document.getElementById("restartBtn");
+// const historyList = document.getElementById("historyList");
 
-// Fetch user info
-fetch("/user-data")
-    .then(res => res.json())
-    .then(data => {
-        document.getElementById("usernameDisplay").innerText = data.username;
-        if (data.profilePic) document.getElementById("userPic").src = data.profilePic;
+// let playerMap = {};
+// let playerScore = { X: 0, O: 0 };
+
+// const winCombos = [
+//     [0, 1, 2],
+//     [3, 4, 5],
+//     [6, 7, 8],
+//     [0, 3, 6],
+//     [1, 4, 7],
+//     [2, 5, 8],
+//     [0, 4, 8],
+//     [2, 4, 6]
+// ];
+
+// // Socket listeners
+// socket.on("waiting", () => {
+//     statusText.textContent = "Waiting for opponent...";
+// });
+
+// socket.on("startGame", (data) => {
+//     room = data.room;
+//     board = Array(9).fill("");
+//     gameActive = true;
+
+//     // LEFT PLAYER
+//     p1Name.textContent = data.leftPlayer.username;
+//     p1Pic.src = data.leftPlayer.profilePic;
+
+//     // RIGHT PLAYER
+//     p2Name.textContent = data.rightPlayer.username;
+//     p2Pic.src = data.rightPlayer.profilePic;
+
+//     playerMap = { X: data.leftPlayer.username, O: data.rightPlayer.username };
+
+//     if (socket.id === data.leftPlayer.id) {
+//         playerSymbol = "X";
+//         opponentSymbol = "O";
+//     } else {
+//         playerSymbol = "O";
+//         opponentSymbol = "X";
+//     }
+
+//     isMyTurn = playerSymbol === "X";
+
+//     cells.forEach(c => {
+//         c.classList.remove("x", "o", "winner");
+//     });
+
+//     updateScores();
+//     updateStatus();
+// });
+
+// socket.on("move", ({ index, player }) => {
+//     board[index] = player;
+//     cells[index].classList.add(player === "X" ? "x" : "o");
+
+//     const winner = checkWinner();
+//     if (winner) {
+//         endGame(winner);
+//         return;
+//     }
+
+//     isMyTurn = player !== playerSymbol;
+//     updateStatus();
+// });
+
+// // socket.on("gameOver", ({ winner }) => {
+// //     endGame(winner);
+// // });
+
+// socket.on("restart", () => {
+//     board = Array(9).fill("");
+//     cells.forEach(c => c.classList.remove("x", "o", "winner"));
+//     gameActive = true;
+//     isMyTurn = playerSymbol === "X";
+//     updateStatus();
+// });
+
+// // Event listeners
+// cells.forEach((cell, index) => {
+//     cell.addEventListener("click", () => {
+//         if (!gameActive || !isMyTurn || board[index] !== "") return;
+
+//         socket.emit("move", { room, index, player: playerSymbol });
+//     });
+// });
+
+// restartBtn.addEventListener("click", () => {
+//     socket.emit("restart", { room });
+// });
+
+// // Functions
+// function checkWinner() {
+//     for (const [a, b, c] of winCombos) {
+//         if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+//             cells[a].classList.add("winner");
+//             cells[b].classList.add("winner");
+//             cells[c].classList.add("winner");
+//             return board[a];
+//         }
+//     }
+//     return board.includes("") ? null : "draw";
+// }
+
+// function endGame(winner) {
+//     gameActive = false;
+
+//     if (winner === "draw") {
+//         statusText.textContent = "Draw";
+//         addHistory("Draw");
+//         return;
+//     }
+
+//     playerScore[winner]++;
+//     const winnerName = playerMap[winner] ||
+//         (winner === "X" ? p1Name.textContent : p2Name.textContent) ||
+//         "Unknown";
+
+//     statusText.textContent = winnerName + " wins";
+//     updateScores();
+//     addHistory(winnerName + " won");
+// }
+
+// function updateStatus() {
+//     if (!gameActive) return;
+//     statusText.textContent = isMyTurn ? "Your turn" : "Opponent turn";
+// }
+
+// function updateScores() {
+//     p1ScoreEl.textContent = playerScore["X"];
+//     p2ScoreEl.textContent = playerScore["O"];
+// }
+
+// function addHistory(text) {
+//     const li = document.createElement("li");
+//     li.textContent = text;
+//     historyList.prepend(li);
+// }
+
+//////////////////////////////////÷÷÷÷÷÷
+//////////////////////////////////÷÷÷÷÷÷
+//////////////////////////////////÷÷÷÷÷÷
+// ---------------- LOGIN PAGE ----------------
+
+const loginForm = document.getElementById("loginForm");
+
+if (loginForm) {
+
+    loginForm.addEventListener("submit", async e => {
+
+        e.preventDefault();
+
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value.trim();
+
+        const res = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+
+            localStorage.setItem("username", data.username);
+            localStorage.setItem("profilePic", data.profilePic);
+
+            window.location.href = "/game.html";
+
+        } else {
+
+            alert(data.message);
+
+        }
+
     });
 
-// Render Board
-function renderBoard() {
-    boardEl.innerHTML = "";
-    board.forEach((cell, i) => {
-        const div = document.createElement("div");
-        div.classList.add("cell");
-        div.innerText = cell;
-        div.onclick = () => handleMove(i);
-        boardEl.appendChild(div);
+}
+
+// ---------------- GAME ----------------
+
+const socket = typeof io !== "undefined" ? io() : null;
+
+if (socket) {
+
+    let room = null;
+    let playerSymbol = "X";
+    let opponentSymbol = "O";
+    let isMyTurn = false;
+    let board = Array(9).fill("");
+    let gameActive = false;
+
+    let username = localStorage.getItem("username");
+    let profilePic = localStorage.getItem("profilePic");
+
+    socket.emit("playerInfo", { username, profilePic });
+
+    const cells = document.querySelectorAll(".cell");
+    const statusText = document.getElementById("statusText");
+    const p1Name = document.getElementById("player1Name");
+    const p2Name = document.getElementById("player2Name");
+    const p1Pic = document.getElementById("player1Pic");
+    const p2Pic = document.getElementById("player2Pic");
+    const p1ScoreEl = document.getElementById("player1Score");
+    const p2ScoreEl = document.getElementById("player2Score");
+    const restartBtn = document.getElementById("restartBtn");
+    const historyList = document.getElementById("historyList");
+
+    let playerMap = {};
+    let playerScore = { X: 0, O: 0 };
+
+    const winCombos = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
+    ];
+
+    socket.on("waiting", () => {
+        statusText.textContent = "Waiting for opponent...";
     });
-}
 
-// Handle user move
-function handleMove(i) {
-    if (board[i] !== "" || gameOver) return;
+    socket.on("startGame", (data) => {
 
-    board[i] = human;
-    renderBoard();
+        room = data.room;
+        board = Array(9).fill("");
+        gameActive = true;
 
-    if (checkWinner(human)) {
-        userScore++;
-        userScoreEl.innerText = userScore;
-        logResult(document.getElementById("usernameDisplay").innerText + " Wins!");
-        gameOver = true;
-        return;
-    }
+        p1Name.textContent = data.leftPlayer.username;
+        p1Pic.src = data.leftPlayer.profilePic;
 
-    if (isTie()) {
-        logResult("Tie Game!");
-        gameOver = true;
-        return;
-    }
+        p2Name.textContent = data.rightPlayer.username;
+        p2Pic.src = data.rightPlayer.profilePic;
 
-    setTimeout(aiMove, 1000);
-}
+        playerMap = { X: data.leftPlayer.username, O: data.rightPlayer.username };
 
-// AI move with simple minimax
-function aiMove() {
-    if (gameOver) return;
-
-    let bestScore = -Infinity;
-    let move;
-
-    for (let i = 0; i < board.length; i++) {
-        if (board[i] === "") {
-            board[i] = ai;
-            let score = minimax(board, 0, false);
-            board[i] = "";
-            if (score > bestScore) {
-                bestScore = score;
-                move = i;
-            }
+        if (socket.id === data.leftPlayer.id) {
+            playerSymbol = "X";
+            opponentSymbol = "O";
+        } else {
+            playerSymbol = "O";
+            opponentSymbol = "X";
         }
-    }
 
-    board[move] = ai;
-    renderBoard();
+        isMyTurn = playerSymbol === "X";
 
-    if (checkWinner(ai)) {
-        aiScore++;
-        aiScoreEl.innerText = aiScore;
-        logResult("Alpha Charlie Wins!");
-        gameOver = true;
-        return;
-    }
+        cells.forEach(c => c.classList.remove("x", "o", "winner"));
 
-    if (isTie() && !gameOver) {
-        logResult("Tie Game!");
-        gameOver = true;
-    }
-}
+        updateScores();
+        updateStatus();
 
-function minimax(boardState, depth, isMaximizing) {
-    if (checkWinner(ai)) return 10 - depth;
-    if (checkWinner(human)) return depth - 10;
-    if (isTie()) return 0;
+    });
 
-    if (isMaximizing) {
-        let best = -Infinity;
-        for (let i = 0; i < boardState.length; i++) {
-            if (boardState[i] === "") {
-                boardState[i] = ai;
-                let score = minimax(boardState, depth + 1, false);
-                boardState[i] = "";
-                best = Math.max(score, best);
-            }
+    socket.on("move", ({ index, player }) => {
+
+        board[index] = player;
+
+        cells[index].classList.add(player === "X" ? "x" : "o");
+
+        const winner = checkWinner();
+
+        if (winner) {
+            endGame(winner);
+            return;
         }
-        return best;
-    } else {
-        let best = Infinity;
-        for (let i = 0; i < boardState.length; i++) {
-            if (boardState[i] === "") {
-                boardState[i] = human;
-                let score = minimax(boardState, depth + 1, true);
-                boardState[i] = "";
-                best = Math.min(score, best);
+
+        isMyTurn = player !== playerSymbol;
+
+        updateStatus();
+
+    });
+
+    socket.on("restart", () => {
+
+        board = Array(9).fill("");
+
+        cells.forEach(c => c.classList.remove("x", "o", "winner"));
+
+        gameActive = true;
+
+        isMyTurn = playerSymbol === "X";
+
+        updateStatus();
+
+    });
+
+    cells.forEach((cell, index) => {
+
+        cell.addEventListener("click", () => {
+
+            if (!gameActive || !isMyTurn || board[index] !== "") return;
+
+            socket.emit("move", { room, index, player: playerSymbol });
+
+        });
+
+    });
+
+    restartBtn.addEventListener("click", () => {
+
+        socket.emit("restart", { room });
+
+    });
+
+    function checkWinner() {
+
+        for (const [a, b, c] of winCombos) {
+
+            if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+
+                cells[a].classList.add("winner");
+                cells[b].classList.add("winner");
+                cells[c].classList.add("winner");
+
+                return board[a];
+
             }
+
         }
-        return best;
+
+        return board.includes("") ? null : "draw";
+
     }
-}
 
-function checkWinner(player) {
-    const wins = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
-    return wins.some(p => p.every(i => board[i] === player));
-}
+    function endGame(winner) {
 
-function isTie() {
-    return board.every(cell => cell !== "");
-}
+        gameActive = false;
 
-function restartGame() {
-    board = ["", "", "", "", "", "", "", "", ""];
-    gameOver = false;
-    renderBoard();
-}
+        if (winner === "draw") {
 
-function logout() {
-    window.location = "/logout";
-}
+            statusText.textContent = "Draw";
 
-function logResult(msg) {
-    const p = document.createElement("p");
-    p.innerText = msg;
-    resultLog.appendChild(p);
-    resultLog.scrollTop = resultLog.scrollHeight;
-}
+            addHistory("Draw");
 
-renderBoard();
+            return;
+
+        }
+
+        playerScore[winner]++;
+
+        const winnerName = playerMap[winner];
+
+        statusText.textContent = winnerName + " wins";
+
+        updateScores();
+
+        addHistory(winnerName + " won");
+
+    }
+
+    function updateStatus() {
+
+        if (!gameActive) return;
+
+        statusText.textContent = isMyTurn ? "Your turn" : "Opponent turn";
+
+    }
+
+    function updateScores() {
+
+        p1ScoreEl.textContent = playerScore["X"];
+        p2ScoreEl.textContent = playerScore["O"];
+
+    }
+
+    function addHistory(text) {
+
+        const li = document.createElement("li");
+
+        li.textContent = text;
+
+        historyList.prepend(li);
+
+    }
+
+}

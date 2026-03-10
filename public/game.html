@@ -2,7 +2,8 @@
 <html>
 
 <head>
-    <title>TicTacToe Game</title>
+    <meta charset="UTF-8">
+    <title>TicTacToe</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -10,34 +11,55 @@
 
     <div class="game-container">
 
+        <h2 id="statusText">Waiting for opponent...</h2>
+
         <div class="scoreboard">
+
+            <!-- Left Player -->
             <div class="player left">
-                <img id="aiPic">
-                <h3 id="aiName">Alpha Charlie</h3>
-                <h2 id="aiScore">0</h2>
+                <img id="player1Pic" src="user-avatar.png" alt="Player 1">
+                <h3 id="player1Name">Player 1</h3>
+                <h2 id="player1Score">0</h2>
             </div>
 
+            <!-- Game board -->
             <div class="board-container">
-                <div class="board" id="board"></div>
+                <div class="board">
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                </div>
             </div>
 
+            <!-- Right Player -->
             <div class="player right">
-                <img id="userPic">
-                <h3 id="usernameDisplay"></h3>
-                <h2 id="userScore">0</h2>
+                <img id="player2Pic" src="ai-avatar.png" alt="Player 2">
+                <h3 id="player2Name">Player 2</h3>
+                <h2 id="player2Score">0</h2>
             </div>
+
         </div>
 
         <div class="bottom-buttons">
-            <button onclick="restartGame()">Next Round</button>
-            <button onclick="logout()">Logout</button>
+            <button id="restartBtn">Next Round</button>
+            <button onclick="window.location.href='/logout'">Logout</button>
+            <div class="history">
+                <h3>Match History</h3>
+                <ul id="historyList"></ul>
+            </div>
         </div>
-
-        <div id="resultLog"></div>
 
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script src="game.js"></script>
+
 </body>
 
 </html>

@@ -1,18 +1,36 @@
+/* =======================
+   Body
+======================= */
+
 body {
     margin: 0;
     font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
     color: white;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
 }
+
+
+/* =======================
+   LOGIN / SIGNUP
+======================= */
 
 .login-container {
     width: 350px;
-    margin: 100px auto;
+    margin: 60px auto;
     padding: 40px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 15px;
     backdrop-filter: blur(10px);
     text-align: center;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+.login-container h2 {
+    margin-bottom: 20px;
 }
 
 .login-container input {
@@ -33,31 +51,55 @@ body {
     cursor: pointer;
     color: white;
     font-weight: bold;
+    transition: 0.3s;
+}
+
+.login-container button:hover {
+    background: #00a0cc;
+}
+
+.login-button-link {
+    display: inline-block;
+    text-decoration: none;
+    padding: 10px 20px;
+    margin-top: 10px;
+    background: #00c6ff;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
 }
 
 .file-label {
     font-size: 0.9em;
-    margin-top: 10px;
-    display: block;
 }
+
+
+/* =======================
+   GAME CONTAINER
+======================= */
 
 .game-container {
     text-align: center;
     padding: 20px;
 }
 
+
+/* =======================
+   PLAYERS
+======================= */
+
 .scoreboard {
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    width: 650px;
+    margin: 20px auto;
 }
 
 .player {
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: 120px;
 }
 
 .player img {
@@ -68,30 +110,105 @@ body {
     margin-bottom: 10px;
 }
 
-.board-container {
-    display: flex;
-    justify-content: center;
-}
+
+/* =======================
+   NEON BOARD
+======================= */
 
 .board {
     display: grid;
-    grid-template-columns: repeat(3, 100px);
-    grid-template-rows: repeat(3, 100px);
-    gap: 10px;
+    grid-template-columns: repeat(3, 110px);
+    grid-template-rows: repeat(3, 110px);
+    gap: 12px;
 }
 
 .cell {
-    width: 100px;
-    height: 100px;
-    background: white;
-    color: black;
-    font-size: 40px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    width: 110px;
+    height: 110px;
+    background: #0a0a0a;
+    border: 2px solid #00eaff;
+    border-radius: 12px;
+    position: relative;
     cursor: pointer;
-    border-radius: 10px;
+
+    box-shadow:
+        0 0 10px #00eaff,
+        inset 0 0 10px #00eaff;
+
+    transition: 0.2s;
 }
+
+.cell:hover {
+    box-shadow:
+        0 0 20px #00eaff,
+        0 0 40px #00eaff;
+}
+
+
+/* =======================
+   X DRAWING
+======================= */
+
+.cell.x::before,
+.cell.x::after {
+    content: "";
+    position: absolute;
+    width: 70%;
+    height: 4px;
+    background: #00eaff;
+    top: 50%;
+    left: 15%;
+    box-shadow: 0 0 10px #00eaff;
+}
+
+.cell.x::before {
+    transform: rotate(45deg);
+}
+
+.cell.x::after {
+    transform: rotate(-45deg);
+}
+
+
+/* =======================
+   O DRAWING
+======================= */
+
+.cell.o::before {
+    content: "";
+    position: absolute;
+    width: 60%;
+    height: 60%;
+    border: 4px solid #ff00ff;
+    border-radius: 50%;
+    top: 20%;
+    left: 20%;
+    box-shadow: 0 0 10px #ff00ff;
+}
+
+
+/* =======================
+   WINNER ANIMATION
+======================= */
+
+.winner {
+    animation: winnerGlow 0.7s infinite alternate;
+}
+
+@keyframes winnerGlow {
+    from {
+        box-shadow: 0 0 10px #00ff88
+    }
+
+    to {
+        box-shadow: 0 0 30px #00ff88
+    }
+}
+
+
+/* =======================
+   BUTTONS
+======================= */
 
 .bottom-buttons {
     margin-top: 20px;
@@ -102,13 +219,31 @@ body {
     margin: 5px;
     border: none;
     border-radius: 8px;
-    cursor: pointer;
     background: #00c6ff;
     color: white;
     font-weight: bold;
+    cursor: pointer;
 }
 
-#resultLog {
-    margin-top: 20px;
-    min-height: 50px;
+
+/* =======================
+   MATCH HISTORY
+======================= */
+
+.history {
+    width: 300px;
+    margin: 20px auto;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.history ul {
+    list-style: none;
+    padding: 0;
+}
+
+.history li {
+    padding: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }

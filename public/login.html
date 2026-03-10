@@ -1,22 +1,106 @@
-<!DOCTYPE html>
+<!-- I want to have this code for later on my Repo -->
+<!-- <!DOCTYPE html>
 <html>
 
 <head>
+    <meta charset="UTF-8">
     <title>Login - TicTacToe</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+
     <div class="login-container">
+
         <h2>TicTacToe Login</h2>
-        <form action="/login" method="POST" enctype="multipart/form-data">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <label class="file-label">Upload Profile Picture</label>
-            <input type="file" name="profilePic" accept="image/*">
+
+        <form id="loginForm">
+
+            <input id="username" placeholder="Username" required>
+
+            <input id="password" type="password" placeholder="Password" required>
+
             <button type="submit">Login</button>
+
         </form>
+
+        <br>
+
+        <a href="/signup.html" class="login-button-link">Create Account</a>
+
     </div>
+
+    <script>
+
+        document.getElementById("loginForm").addEventListener("submit", async e => {
+
+            e.preventDefault();
+
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value.trim();
+
+            const res = await fetch("/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+
+                localStorage.setItem("username", data.username);
+                localStorage.setItem("profilePic", data.profilePic);
+
+                window.location.href = "/game.html";
+
+            } else {
+
+                alert(data.message);
+
+            }
+
+        });
+
+    </script>
+
+</body>
+
+</html> -->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Login - TicTacToe</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="login-container">
+
+        <h2>TicTacToe Login</h2>
+
+        <form id="loginForm">
+
+            <input id="username" placeholder="Username" required>
+
+            <input id="password" type="password" placeholder="6 digit password from email" required>
+
+            <button type="submit">Login</button>
+
+        </form>
+
+        <br>
+
+        <a href="/signup.html" class="login-button-link">Create Account</a>
+
+    </div>
+
+    <script src="game.js"></script>
+
 </body>
 
 </html>
