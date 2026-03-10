@@ -540,7 +540,10 @@ app.post("/login", async (req, res) => {
         profilePic: user.profilePic
     });
 });
-
+// Login rout
+app.get("/", (req, res) => {
+    res.redirect("/login.html");
+});
 // ---------------- PROTECT GAME PAGE ----------------
 
 app.get("/game.html", (req, res) => {
