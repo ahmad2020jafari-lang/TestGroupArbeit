@@ -775,7 +775,6 @@ const { Server } = require("socket.io");
 const path = require("path");
 const multer = require("multer");
 const nodemailer = require("nodemailer");
-const fs = require('fs');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
@@ -783,22 +782,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// FIX 1: Correct Cloudinary configuration with debugging
-console.log("🔍 Checking Cloudinary environment variables:");
-console.log("CLOUDINARY_CLOUD_NAME:", process.env.CLOUDINARY_CLOUD_NAME ? "✅ Found" : "❌ Missing");
-console.log("CLOUDINARY_API_KEY:", process.env.CLOUDINARY_API_KEY ? "✅ Found" : "❌ Missing");
-console.log("CLOUDINARY_API_SECRET:", process.env.CLOUDINARY_API_SECRET ? "✅ Found" : "❌ Missing");
-
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
+// Basic middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve static files from public folder (your structure stays the same!)
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(session({
@@ -807,12 +793,25 @@ app.use(session({
     saveUninitialized: false
 }));
 
-// ---------------- MONGODB ----------------
+// ✅ FIX 1: Cloudinary configuration with error handling
+try {
+    console.log("Configuring Cloudinary...");
+    cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET
+    });
+    console.log("✅ Cloudinary configured");
+} catch (error) {
+    console.error("❌ Cloudinary config error:", error);
+}
 
+// ✅ FIX 2: MongoDB connection
 mongoose.connect("mongodb+srv://PlanwerkMaster:CsBeAhura@planwerkmaster.cncawku.mongodb.net/tictactoe?retryWrites=true&w=majority")
     .then(() => console.log("✅ MongoDB Connected"))
     .catch(err => console.log("❌ MongoDB Error:", err));
 
+// User Schema
 const userSchema = new mongoose.Schema({
     username: { type: String, unique: true },
     email: { type: String, unique: true },
@@ -822,8 +821,7 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-// ---------------- EMAIL SYSTEM ----------------
-
+// Email setup
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -832,140 +830,47 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-transporter.verify(function (error, success) {
-    if (error) {
-        console.log("❌ Email server error:", error);
-    } else {
-        console.log("✅ Email server is ready");
-    }
-});
-
 function generateCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// ---------------- FILE UPLOAD (CLOUDINARY) ----------------
-
-// FIX 2: Proper Cloudinary storage configuration with upload preset
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: async (req, file) => {
-        return {
-            folder: 'tictactoe-profile-pics',
-            allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-            transformation: [{ width: 200, height: 200, crop: 'limit' }],
-            upload_preset: 'ml_default',  // CRITICAL: Add your upload preset
-            public_id: Date.now() + '-' + Math.round(Math.random() * 1E9) // Unique filename
-        };
+// ✅ FIX 3: SIMPLE FILE UPLOAD - NO CLOUDINARY FIRST
+// Let's use local storage first to confirm everything else works
+const localStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, 'public/uploads');
+        // Create directory if it doesn't exist
+        if (!require('fs').existsSync(uploadDir)) {
+            require('fs').mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname);
     }
 });
 
 const upload = multer({
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+    storage: localStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }
 });
 
-// ---------------- DEBUG ROUTES (Remove after fixing) ----------------
-
-// FIX 3: Debug route to check Cloudinary config
-app.get("/debug/cloudinary", (req, res) => {
-    res.json({
-        cloudinaryConfigured: {
-            cloud_name: !!process.env.CLOUDINARY_CLOUD_NAME,
-            api_key: !!process.env.CLOUDINARY_API_KEY,
-            api_secret: !!process.env.CLOUDINARY_API_SECRET
-        },
-        cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'not set',
-        uploadPreset: 'ml_default (configured in code)',
-        folder: 'tictactoe-profile-pics'
-    });
-});
-
-// FIX 4: Debug route to check user profile pics
-app.get("/debug/user/:username", async (req, res) => {
-    try {
-        const user = await User.findOne({ username: req.params.username });
-        if (!user) {
-            return res.send("User not found");
-        }
-
-        const isCloudinaryUrl = user.profilePic && user.profilePic.startsWith('http');
-
-        res.send(`
-            <h1>Debug Info for ${user.username}</h1>
-            <p><strong>ProfilePic in Database:</strong> ${user.profilePic}</p>
-            <p><strong>Type:</strong> ${isCloudinaryUrl ? '✅ Cloudinary URL' : '❌ Local Path'}</p>
-            ${!isCloudinaryUrl && user.profilePic !== '/user-avatar.png' ?
-                `<p style="color:red">⚠️ This is a local path! Upload again with Cloudinary.</p>` :
-                ''}
-            <p><strong>Test Image:</strong></p>
-            <img src="${user.profilePic}" style="max-width:200px; border:1px solid #ccc;" 
-                 onerror="this.onerror=null; this.src=''; this.alt='Image failed to load'">
-            <p><a href="${user.profilePic}" target="_blank">Direct link to image</a></p>
-            <hr>
-            <p><a href="/debug/fix-user/${user.username}">Fix this user (set to default avatar)</a></p>
-        `);
-    } catch (error) {
-        res.send("Error: " + error.message);
-    }
-});
-
-// FIX 5: Debug route to fix a specific user
-app.get("/debug/fix-user/:username", async (req, res) => {
-    try {
-        const user = await User.findOne({ username: req.params.username });
-        if (!user) {
-            return res.send("User not found");
-        }
-
-        user.profilePic = "/user-avatar.png";
-        await user.save();
-
-        res.send(`✅ User ${user.username} fixed - now using default avatar`);
-    } catch (error) {
-        res.send("Error: " + error.message);
-    }
-});
-
-// FIX 6: Debug route to fix all users with local paths
-app.get("/debug/fix-all-users", async (req, res) => {
-    try {
-        const users = await User.find({
-            profilePic: { $regex: '^/uploads/' }
-        });
-
-        let fixed = 0;
-        for (const user of users) {
-            user.profilePic = "/user-avatar.png";
-            await user.save();
-            fixed++;
-        }
-
-        res.send(`✅ Fixed ${fixed} users - set them to default avatar`);
-    } catch (error) {
-        res.send("Error: " + error.message);
-    }
-});
-
-// ---------------- SIGNUP ----------------
-
-// FIX 7: Complete signup route with Cloudinary
+// ✅ FIX 4: SIMPLE SIGNUP ROUTE - NO CLOUDINARY YET
 app.post("/signup", upload.single("profilePic"), async (req, res) => {
     try {
-        console.log("========== SIGNUP DEBUG ==========");
-        console.log("1. Signup request received for:", req.body.username);
-        console.log("2. File received?", req.file ? "YES" : "NO");
-
-        if (req.file) {
-            console.log("3. File details:", {
-                filename: req.file.filename,
-                path: req.file.path,
-                size: req.file.size,
-                mimetype: req.file.mimetype
-            });
-        }
+        console.log("📝 Signup request received");
+        console.log("Body:", req.body);
+        console.log("File:", req.file ? req.file.filename : "No file");
 
         const { username, email } = req.body;
+
+        // Validate input
+        if (!username || !email) {
+            return res.status(400).json({
+                success: false,
+                message: "Username and email are required"
+            });
+        }
 
         // Check if user exists
         const existing = await User.findOne({
@@ -973,26 +878,20 @@ app.post("/signup", upload.single("profilePic"), async (req, res) => {
         });
 
         if (existing) {
-            console.log("4. User already exists");
             return res.json({ success: false, message: "User exists" });
         }
 
+        // Generate password
         const code = generateCode();
         const hashed = await bcrypt.hash(code, 10);
 
-        // FIX 8: Get Cloudinary URL or use default
-        let profilePicUrl = "/user-avatar.png"; // Default from your public folder
-
+        // Set profile picture path
+        let profilePicUrl = "/user-avatar.png";
         if (req.file) {
-            // This is a Cloudinary URL
-            profilePicUrl = req.file.path;
-            console.log("5. ✅ Cloudinary upload successful!");
-            console.log("   URL:", profilePicUrl);
-            console.log("   This should start with: https://res.cloudinary.com/...");
-        } else {
-            console.log("5. ℹ️ No profile picture uploaded, using default avatar");
+            profilePicUrl = "/uploads/" + req.file.filename;
         }
 
+        // Create user
         const user = new User({
             username,
             email,
@@ -1001,32 +900,41 @@ app.post("/signup", upload.single("profilePic"), async (req, res) => {
         });
 
         await user.save();
-        console.log("6. ✅ User saved to database with profilePic:", profilePicUrl);
+        console.log("✅ User saved:", username);
 
-        // Send email with password
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: "TicTacToe Login Code",
-            text: `Your TicTacToe password is: ${code}\n\nUse this 6 digit code together with your username to login.`
-        });
-
-        console.log("7. ✅ Email sent to:", email);
-        console.log("========== SIGNUP COMPLETE ==========");
+        // Send email
+        try {
+            await transporter.sendMail({
+                from: process.env.EMAIL_USER,
+                to: email,
+                subject: "TicTacToe Login Code",
+                text: `Your TicTacToe password is: ${code}`
+            });
+            console.log("✅ Email sent");
+        } catch (emailError) {
+            console.error("❌ Email error:", emailError);
+            // Continue even if email fails
+        }
 
         res.json({
             success: true,
             message: "User created successfully"
         });
+
     } catch (error) {
         console.error("❌ SIGNUP ERROR:", error);
         console.error("Error details:", error.message);
-        res.json({ success: false, message: "Server error: " + error.message });
+        console.error("Stack:", error.stack);
+
+        // ALWAYS return JSON, never HTML
+        res.status(500).json({
+            success: false,
+            message: "Server error: " + error.message
+        });
     }
 });
 
-// ---------------- LOGIN ----------------
-
+// Login route
 app.post("/login", async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -1048,8 +956,6 @@ app.post("/login", async (req, res) => {
         req.session.username = user.username;
         req.session.profilePic = user.profilePic;
 
-        console.log(`✅ User ${username} logged in with profilePic:`, user.profilePic);
-
         res.json({
             success: true,
             username: user.username,
@@ -1057,12 +963,11 @@ app.post("/login", async (req, res) => {
         });
     } catch (error) {
         console.error("❌ Login error:", error);
-        res.json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error" });
     }
 });
 
-// ---------------- ROUTES ----------------
-
+// Routes
 app.get("/", (req, res) => {
     res.redirect("/login.html");
 });
@@ -1076,30 +981,33 @@ app.get("/logout", (req, res) => {
     req.session.destroy(() => res.redirect("/login.html"));
 });
 
-// ---------------- GAME VARIABLES ----------------
+// ✅ FIX 5: Error handling middleware - catch all errors
+app.use((err, req, res, next) => {
+    console.error("❌ Global error handler:", err);
+    res.status(500).json({
+        success: false,
+        message: "Something broke! " + err.message
+    });
+});
 
+// Game variables
 let waitingPlayer = null;
 let waitingTimeout = null;
 let rooms = {};
 
-// ---------------- SOCKET ----------------
-
+// Socket.io (your existing socket code - unchanged)
 io.on("connection", (socket) => {
-
     socket.on("playerInfo", (data) => {
-
         socket.username = data.username;
         socket.profilePic = data.profilePic;
 
         if (waitingPlayer && waitingPlayer.id !== socket.id) {
-
             if (waitingTimeout) {
                 clearTimeout(waitingTimeout);
                 waitingTimeout = null;
             }
 
             const room = waitingPlayer.id + "#" + socket.id;
-
             socket.join(room);
             waitingPlayer.join(room);
 
@@ -1127,18 +1035,13 @@ io.on("connection", (socket) => {
             });
 
             waitingPlayer = null;
-
         } else {
-
             waitingPlayer = socket;
             socket.emit("waiting");
 
             waitingTimeout = setTimeout(() => {
-
                 if (waitingPlayer === socket) {
-
                     const room = socket.id;
-
                     socket.join(room);
 
                     rooms[room] = {
@@ -1214,8 +1117,7 @@ io.on("connection", (socket) => {
     });
 });
 
-// ---------------- GAME LOGIC ----------------
-
+// Game logic functions
 function checkWinner(board) {
     const combos = [
         [0, 1, 2], [3, 4, 5], [6, 7, 8],
