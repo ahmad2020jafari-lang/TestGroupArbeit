@@ -775,8 +775,7 @@ const { Server } = require("socket.io");
 const path = require("path");
 const multer = require("multer");
 const nodemailer = require("nodemailer");
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -793,25 +792,11 @@ app.use(session({
     saveUninitialized: false
 }));
 
-// ✅ FIX 1: Cloudinary configuration with error handling
-try {
-    console.log("Configuring Cloudinary...");
-    cloudinary.config({
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET
-    });
-    console.log("✅ Cloudinary configured");
-} catch (error) {
-    console.error("❌ Cloudinary config error:", error);
-}
-
-// ✅ FIX 2: MongoDB connection
+// ---------------- MONGODB ----------------
 mongoose.connect("mongodb+srv://PlanwerkMaster:CsBeAhura@planwerkmaster.cncawku.mongodb.net/tictactoe?retryWrites=true&w=majority")
     .then(() => console.log("✅ MongoDB Connected"))
     .catch(err => console.log("❌ MongoDB Error:", err));
 
-// User Schema
 const userSchema = new mongoose.Schema({
     username: { type: String, unique: true },
     email: { type: String, unique: true },
@@ -821,7 +806,18 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-// Email setup
+// ---------------- EMAIL SYSTEM (FIXED) ----------------
+console.log("📧 Checking email configuration...");
+console.log("EMAIL_USER:", process.env.EMAIL_USER ? "✅ Found" : "❌ Missing");
+console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "✅ Found" : "❌ Missing");
+
+// Create uploads directory if it doesn't exist
+const uploadDir = path.join(__dirname, 'public/uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    console.log("📁 Created uploads directory:", uploadDir);
+}
+
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -830,43 +826,48 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Test email connection
+transporter.verify(function (error, success) {
+    if (error) {
+        console.log("❌ Email server error:", error.message);
+        console.log("💡 Make sure you're using an App Password, not your regular Gmail password");
+    } else {
+        console.log("✅ Email server is ready to send messages");
+    }
+});
+
 function generateCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// ✅ FIX 3: SIMPLE FILE UPLOAD - NO CLOUDINARY FIRST
-// Let's use local storage first to confirm everything else works
-const localStorage = multer.diskStorage({
+// ---------------- FILE UPLOAD (LOCAL STORAGE) ----------------
+const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, 'public/uploads');
-        // Create directory if it doesn't exist
-        if (!require('fs').existsSync(uploadDir)) {
-            require('fs').mkdirSync(uploadDir, { recursive: true });
-        }
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname);
+        // Create unique filename
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, uniqueSuffix + ext);
     }
 });
 
 const upload = multer({
-    storage: localStorage,
-    limits: { fileSize: 5 * 1024 * 1024 }
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-// ✅ FIX 4: SIMPLE SIGNUP ROUTE - NO CLOUDINARY YET
+// ---------------- SIGNUP (FIXED) ----------------
 app.post("/signup", upload.single("profilePic"), async (req, res) => {
     try {
-        console.log("📝 Signup request received");
-        console.log("Body:", req.body);
-        console.log("File:", req.file ? req.file.filename : "No file");
+        console.log("📝 Signup request received for:", req.body.username);
 
         const { username, email } = req.body;
 
         // Validate input
         if (!username || !email) {
-            return res.status(400).json({
+            return res.json({
                 success: false,
                 message: "Username and email are required"
             });
@@ -878,17 +879,20 @@ app.post("/signup", upload.single("profilePic"), async (req, res) => {
         });
 
         if (existing) {
-            return res.json({ success: false, message: "User exists" });
+            return res.json({ success: false, message: "User already exists" });
         }
 
-        // Generate password
+        // Generate 6-digit password
         const code = generateCode();
+        console.log("🔑 Generated password for", username, ":", code);
+
         const hashed = await bcrypt.hash(code, 10);
 
         // Set profile picture path
-        let profilePicUrl = "/user-avatar.png";
+        let profilePicUrl = "/user-avatar.png"; // Default
         if (req.file) {
             profilePicUrl = "/uploads/" + req.file.filename;
+            console.log("🖼️ Profile picture saved:", profilePicUrl);
         }
 
         // Create user
@@ -900,33 +904,39 @@ app.post("/signup", upload.single("profilePic"), async (req, res) => {
         });
 
         await user.save();
-        console.log("✅ User saved:", username);
+        console.log("✅ User saved to database:", username);
 
-        // Send email
+        // Send email with password
         try {
-            await transporter.sendMail({
+            console.log("📧 Attempting to send email to:", email);
+
+            const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: email,
-                subject: "TicTacToe Login Code",
-                text: `Your TicTacToe password is: ${code}`
-            });
-            console.log("✅ Email sent");
+                subject: "🎮 Your TicTacToe Login Password",
+                text: `Hello ${username},\n\nYour TicTacToe login password is: ${code}\n\nUse this 6-digit code with your username to login.\n\nEnjoy the game! 🎯`
+            };
+
+            const info = await transporter.sendMail(mailOptions);
+            console.log("✅ Email sent successfully! Message ID:", info.messageId);
+
         } catch (emailError) {
-            console.error("❌ Email error:", emailError);
-            // Continue even if email fails
+            console.error("❌ Failed to send email:", emailError.message);
+            console.log("💡 For testing, your password is:", code);
+            // Continue even if email fails - we'll show code in response for testing
         }
 
+        // Send response (include code in response for testing, remove in production)
         res.json({
             success: true,
-            message: "User created successfully"
+            message: "User created successfully",
+            // TEMPORARY: Include code in response for testing
+            debugCode: code,
+            note: "Check your email for the password. If email fails, use this code."
         });
 
     } catch (error) {
-        console.error("❌ SIGNUP ERROR:", error);
-        console.error("Error details:", error.message);
-        console.error("Stack:", error.stack);
-
-        // ALWAYS return JSON, never HTML
+        console.error("❌ Signup error:", error);
         res.status(500).json({
             success: false,
             message: "Server error: " + error.message
@@ -934,7 +944,7 @@ app.post("/signup", upload.single("profilePic"), async (req, res) => {
     }
 });
 
-// Login route
+// ---------------- LOGIN ----------------
 app.post("/login", async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -963,11 +973,11 @@ app.post("/login", async (req, res) => {
         });
     } catch (error) {
         console.error("❌ Login error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
+        res.json({ success: false, message: "Server error" });
     }
 });
 
-// Routes
+// ---------------- ROUTES ----------------
 app.get("/", (req, res) => {
     res.redirect("/login.html");
 });
@@ -981,33 +991,41 @@ app.get("/logout", (req, res) => {
     req.session.destroy(() => res.redirect("/login.html"));
 });
 
-// ✅ FIX 5: Error handling middleware - catch all errors
-app.use((err, req, res, next) => {
-    console.error("❌ Global error handler:", err);
-    res.status(500).json({
-        success: false,
-        message: "Something broke! " + err.message
+// ---------------- DEBUG ROUTE ----------------
+app.get("/debug/emails", (req, res) => {
+    res.json({
+        emailConfigured: {
+            user: !!process.env.EMAIL_USER,
+            pass: !!process.env.EMAIL_PASS
+        },
+        emailUser: process.env.EMAIL_USER || 'not set',
+        uploadsDirectory: fs.existsSync(uploadDir) ? '✅ Exists' : '❌ Missing',
+        nodeEnv: process.env.NODE_ENV || 'development'
     });
 });
 
-// Game variables
+// ---------------- GAME VARIABLES ----------------
 let waitingPlayer = null;
 let waitingTimeout = null;
 let rooms = {};
 
-// Socket.io (your existing socket code - unchanged)
+// ---------------- SOCKET (unchanged) ----------------
 io.on("connection", (socket) => {
+
     socket.on("playerInfo", (data) => {
+
         socket.username = data.username;
         socket.profilePic = data.profilePic;
 
         if (waitingPlayer && waitingPlayer.id !== socket.id) {
+
             if (waitingTimeout) {
                 clearTimeout(waitingTimeout);
                 waitingTimeout = null;
             }
 
             const room = waitingPlayer.id + "#" + socket.id;
+
             socket.join(room);
             waitingPlayer.join(room);
 
@@ -1035,13 +1053,18 @@ io.on("connection", (socket) => {
             });
 
             waitingPlayer = null;
+
         } else {
+
             waitingPlayer = socket;
             socket.emit("waiting");
 
             waitingTimeout = setTimeout(() => {
+
                 if (waitingPlayer === socket) {
+
                     const room = socket.id;
+
                     socket.join(room);
 
                     rooms[room] = {
