@@ -785,6 +785,7 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 app.use(session({
     secret: "tictactoe_secret",
@@ -796,6 +797,40 @@ app.use(session({
 mongoose.connect("mongodb+srv://PlanwerkMaster:CsBeAhura@planwerkmaster.cncawku.mongodb.net/tictactoe?retryWrites=true&w=majority")
     .then(() => console.log("✅ MongoDB Connected"))
     .catch(err => console.log("❌ MongoDB Error:", err));
+
+app.get("/debug/files", (req, res) => {
+    const fs = require('fs');
+    const uploadPath = path.join(__dirname, 'public/uploads');
+
+    try {
+        // Check if directory exists
+        if (!fs.existsSync(uploadPath)) {
+            return res.json({
+                error: "Uploads directory does not exist",
+                path: uploadPath
+            });
+        }
+
+        const files = fs.readdirSync(uploadPath);
+        res.json({
+            success: true,
+            uploadPath: uploadPath,
+            filesFound: files,
+            fileCount: files.length,
+            yourSpecificFile: files.includes('1773224475727-ahmad.png') ? '✅ FOUND!' : '❌ NOT FOUND',
+            fullUrls: files.map(f => `/uploads/${f}`)
+        });
+    } catch (error) {
+        res.json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+// ===========================================
+
+// ---------------- EMAIL SYSTEM ----------------
+console.log("📧 Checking email configuration...");
 
 const userSchema = new mongoose.Schema({
     username: { type: String, unique: true },
