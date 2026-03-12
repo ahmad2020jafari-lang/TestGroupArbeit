@@ -75,6 +75,27 @@
     <meta charset="UTF-8">
     <title>Signup - TicTacToe</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .code-display {
+            background: #f0f0f0;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            color: #333;
+            border: 2px solid #4CAF50;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            margin: 10px 0;
+            color: #666;
+        }
+    </style>
 </head>
 
 <body>
@@ -89,14 +110,23 @@
 
             <input name="email" type="email" placeholder="Email" required>
 
-            <!-- REMOVED: password field - server generates its own! -->
-
             <label class="file-label">Upload profile picture (optional)</label>
             <input name="profilePic" type="file" accept="image/*">
 
-            <button type="submit">Sign Up</button>
+            <button type="submit" id="submitBtn">Sign Up</button>
 
         </form>
+
+        <!-- This will show the login code if email fails -->
+        <div id="codeDisplay" class="code-display">
+            <p>Your login code is:</p>
+            <div id="loginCode"></div>
+            <p style="font-size: 14px; margin-top: 10px;">Use this code to login</p>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            Processing...
+        </div>
 
         <br>
 
@@ -109,6 +139,14 @@
             e.preventDefault();
 
             const formData = new FormData(e.target);
+            const submitBtn = document.getElementById("submitBtn");
+            const loading = document.getElementById("loading");
+            const codeDisplay = document.getElementById("codeDisplay");
+
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            loading.style.display = "block";
+            codeDisplay.style.display = "none";
 
             try {
                 const res = await fetch("/signup", {
@@ -117,22 +155,36 @@
                 });
 
                 const data = await res.json();
-                console.log("Server response:", data); // For debugging
+                console.log("Server response:", data);
 
                 if (data.success) {
                     if (data.debugCode) {
-                        // If email failed, show the code
-                        alert(`Account created! Since email failed, use this code to login: ${data.debugCode}`);
+                        // Show the code on screen
+                        document.getElementById("loginCode").innerHTML =
+                            `<strong style="font-size: 32px;">${data.debugCode}</strong>`;
+                        codeDisplay.style.display = "block";
+
+                        // Also show in alert
+                        alert(`Account created! Your login code is: ${data.debugCode}\n\nUse this code to login.`);
                     } else {
                         alert("Account created! Check your email for the 6-digit login code.");
                     }
-                    window.location.href = "/login.html";
+
+                    // Don't redirect immediately - let user see/copy the code
+                    setTimeout(() => {
+                        window.location.href = "/login.html";
+                    }, 5000);
+
                 } else {
                     alert("Error: " + data.message);
+                    submitBtn.disabled = false;
+                    loading.style.display = "none";
                 }
             } catch (error) {
                 console.error("Fetch error:", error);
                 alert("Network error - check console");
+                submitBtn.disabled = false;
+                loading.style.display = "none";
             }
         });
     </script>
