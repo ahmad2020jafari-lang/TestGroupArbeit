@@ -798,40 +798,7 @@ mongoose.connect("mongodb+srv://PlanwerkMaster:CsBeAhura@planwerkmaster.cncawku.
     .then(() => console.log("✅ MongoDB Connected"))
     .catch(err => console.log("❌ MongoDB Error:", err));
 
-app.get("/debug/files", (req, res) => {
-    const fs = require('fs');
-    const uploadPath = path.join(__dirname, 'public/uploads');
-
-    try {
-        // Check if directory exists
-        if (!fs.existsSync(uploadPath)) {
-            return res.json({
-                error: "Uploads directory does not exist",
-                path: uploadPath
-            });
-        }
-
-        const files = fs.readdirSync(uploadPath);
-        res.json({
-            success: true,
-            uploadPath: uploadPath,
-            filesFound: files,
-            fileCount: files.length,
-            yourSpecificFile: files.includes('1773224475727-ahmad.png') ? '✅ FOUND!' : '❌ NOT FOUND',
-            fullUrls: files.map(f => `/uploads/${f}`)
-        });
-    } catch (error) {
-        res.json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-// ===========================================
-
-// ---------------- EMAIL SYSTEM ----------------
-console.log("📧 Checking email configuration...");
-
+// ---------------- SCHEMA ----------------
 const userSchema = new mongoose.Schema({
     username: { type: String, unique: true },
     email: { type: String, unique: true },
@@ -841,7 +808,7 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-// ---------------- EMAIL SYSTEM (FIXED) ----------------
+// ---------------- EMAIL SYSTEM ----------------
 console.log("📧 Checking email configuration...");
 console.log("EMAIL_USER:", process.env.EMAIL_USER ? "✅ Found" : "❌ Missing");
 console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "✅ Found" : "❌ Missing");
@@ -853,6 +820,7 @@ if (!fs.existsSync(uploadDir)) {
     console.log("📁 Created uploads directory:", uploadDir);
 }
 
+// Configure email transporter
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -875,13 +843,12 @@ function generateCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// ---------------- FILE UPLOAD (LOCAL STORAGE) ----------------
+// ---------------- FILE UPLOAD ----------------
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        // Create unique filename
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const ext = path.extname(file.originalname);
         cb(null, uniqueSuffix + ext);
@@ -893,7 +860,35 @@ const upload = multer({
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-// ---------------- SIGNUP (FIXED) ----------------
+// ---------------- DEBUG ROUTES ----------------
+app.get("/debug/files", (req, res) => {
+    try {
+        if (!fs.existsSync(uploadDir)) {
+            return res.json({ error: "Uploads directory does not exist" });
+        }
+        const files = fs.readdirSync(uploadDir);
+        res.json({
+            success: true,
+            files: files,
+            count: files.length
+        });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+app.get("/debug/emails", (req, res) => {
+    res.json({
+        emailConfigured: {
+            user: !!process.env.EMAIL_USER,
+            pass: !!process.env.EMAIL_PASS
+        },
+        emailUser: process.env.EMAIL_USER || 'not set',
+        uploadsDirectory: fs.existsSync(uploadDir) ? '✅ Exists' : '❌ Missing'
+    });
+});
+
+// ---------------- SIGNUP ----------------
 app.post("/signup", upload.single("profilePic"), async (req, res) => {
     try {
         console.log("📝 Signup request received for:", req.body.username);
@@ -955,20 +950,22 @@ app.post("/signup", upload.single("profilePic"), async (req, res) => {
             const info = await transporter.sendMail(mailOptions);
             console.log("✅ Email sent successfully! Message ID:", info.messageId);
 
+            res.json({
+                success: true,
+                message: "User created successfully. Check your email for the password."
+            });
+
         } catch (emailError) {
             console.error("❌ Failed to send email:", emailError.message);
-            console.log("💡 For testing, your password is:", code);
-            // Continue even if email fails - we'll show code in response for testing
-        }
 
-        // Send response (include code in response for testing, remove in production)
-        res.json({
-            success: true,
-            message: "User created successfully",
-            // TEMPORARY: Include code in response for testing
-            debugCode: code,
-            note: "Check your email for the password. If email fails, use this code."
-        });
+            // Still return success but with debug info
+            res.json({
+                success: true,
+                message: "User created successfully",
+                debugCode: code, // TEMPORARY: Remove in production
+                note: "Email failed to send. Use this code to login."
+            });
+        }
 
     } catch (error) {
         console.error("❌ Signup error:", error);
@@ -1026,41 +1023,24 @@ app.get("/logout", (req, res) => {
     req.session.destroy(() => res.redirect("/login.html"));
 });
 
-// ---------------- DEBUG ROUTE ----------------
-app.get("/debug/emails", (req, res) => {
-    res.json({
-        emailConfigured: {
-            user: !!process.env.EMAIL_USER,
-            pass: !!process.env.EMAIL_PASS
-        },
-        emailUser: process.env.EMAIL_USER || 'not set',
-        uploadsDirectory: fs.existsSync(uploadDir) ? '✅ Exists' : '❌ Missing',
-        nodeEnv: process.env.NODE_ENV || 'development'
-    });
-});
-
 // ---------------- GAME VARIABLES ----------------
 let waitingPlayer = null;
 let waitingTimeout = null;
 let rooms = {};
 
-// ---------------- SOCKET (unchanged) ----------------
+// ---------------- SOCKET ----------------
 io.on("connection", (socket) => {
-
     socket.on("playerInfo", (data) => {
-
         socket.username = data.username;
         socket.profilePic = data.profilePic;
 
         if (waitingPlayer && waitingPlayer.id !== socket.id) {
-
             if (waitingTimeout) {
                 clearTimeout(waitingTimeout);
                 waitingTimeout = null;
             }
 
             const room = waitingPlayer.id + "#" + socket.id;
-
             socket.join(room);
             waitingPlayer.join(room);
 
@@ -1088,18 +1068,13 @@ io.on("connection", (socket) => {
             });
 
             waitingPlayer = null;
-
         } else {
-
             waitingPlayer = socket;
             socket.emit("waiting");
 
             waitingTimeout = setTimeout(() => {
-
                 if (waitingPlayer === socket) {
-
                     const room = socket.id;
-
                     socket.join(room);
 
                     rooms[room] = {
@@ -1152,7 +1127,6 @@ io.on("connection", (socket) => {
 
         if (roomData.rightPlayer === "AI" && player === "X") {
             const aiIndex = smartAI(roomData.board);
-
             roomData.board[aiIndex] = "O";
             roomData.turn = "X";
 
@@ -1170,7 +1144,6 @@ io.on("connection", (socket) => {
 
         roomData.board = Array(9).fill(null);
         roomData.turn = "X";
-
         io.to(room).emit("restart");
     });
 });
@@ -1188,25 +1161,21 @@ function checkWinner(board) {
             return board[a];
         }
     }
-
     return board.includes(null) ? null : "draw";
 }
 
 function smartAI(board) {
     const empty = board.map((v, i) => v === null ? i : null).filter(v => v !== null);
-
     for (const i of empty) {
         board[i] = "O";
         if (checkWinner(board) === "O") { board[i] = null; return i; }
         board[i] = null;
     }
-
     for (const i of empty) {
         board[i] = "X";
         if (checkWinner(board) === "X") { board[i] = null; return i; }
         board[i] = null;
     }
-
     return empty[Math.floor(Math.random() * empty.length)];
 }
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
 
 <head>
@@ -63,6 +63,78 @@
 
         });
 
+    </script>
+
+</body>
+
+</html> -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Signup - TicTacToe</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="login-container">
+
+        <h2>Create Account</h2>
+
+        <form id="signupForm" enctype="multipart/form-data">
+
+            <input name="username" placeholder="Username" required>
+
+            <input name="email" type="email" placeholder="Email" required>
+
+            <!-- REMOVED: password field - server generates its own! -->
+
+            <label class="file-label">Upload profile picture (optional)</label>
+            <input name="profilePic" type="file" accept="image/*">
+
+            <button type="submit">Sign Up</button>
+
+        </form>
+
+        <br>
+
+        <a href="/login.html" class="login-button-link">Back to Login</a>
+
+    </div>
+
+    <script>
+        document.getElementById("signupForm").addEventListener("submit", async e => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+
+            try {
+                const res = await fetch("/signup", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await res.json();
+                console.log("Server response:", data); // For debugging
+
+                if (data.success) {
+                    if (data.debugCode) {
+                        // If email failed, show the code
+                        alert(`Account created! Since email failed, use this code to login: ${data.debugCode}`);
+                    } else {
+                        alert("Account created! Check your email for the 6-digit login code.");
+                    }
+                    window.location.href = "/login.html";
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch (error) {
+                console.error("Fetch error:", error);
+                alert("Network error - check console");
+            }
+        });
     </script>
 
 </body>
